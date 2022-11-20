@@ -8,6 +8,9 @@ import hashlib
 # Import Blueprint
 from .siswa.controllers import siswa
 from .pelanggan.controllers import pelanggan
+from .artikel.controllers import artikel
+from .poli_gizi.controllers import poli_gizi
+from .poli_klinik.controllers import poli_klinik
 
 # Membuat server Flask
 app = Flask(__name__)
@@ -51,7 +54,7 @@ def login():
 	data_user	= data_user[0]
 	print(data_user)
 
-	db_id_user 	= data_user["id_pelanggan"]
+	role 	= data_user["role"]
 	db_username = data_user["username_pelanggan"]
 	# db_role		= data_user["role"]
 
@@ -59,13 +62,59 @@ def login():
 	# 	return make_response(jsonify(deskripsi="Password salah"), 401)
 
 	jwt_payload = {
-		"id_user" : db_id_user,
-		"role" : db_username
+		"username" : db_username,
+		"role"	   : role 
 	}
 
 	access_token = create_access_token(username, additional_claims=jwt_payload)
 
 	return jsonify(access_token=access_token)
+
+
+@app.route("/login_admin", methods=["POST"])
+def login_admin():
+	ROUTE_NAME = request.path
+
+	data = request.json
+
+	username = data["username_admin"]
+	password = data["password_admin"]
+
+	username = username.lower()
+	password_enc = hashlib.md5(password.encode('utf-8')).hexdigest() # Convert password to md5
+
+	# Cek kredensial didalam database
+	query = " SELECT * FROM `admin` WHERE username = %s AND `password` =  %s"
+	values = (username, password_enc)
+
+	data_admin = select(query, values)
+	print(data_admin)
+	print(type(data_admin))
+
+	if len(data_admin) == 0:
+		return make_response(jsonify(deskripsi="Username  dan passaword salah"), 401)
+
+	data_admin	= data_admin[0]
+	print(data_admin)
+
+	
+	db_username = data_admin["username"]
+	role 	= data_admin["role"]
+	# db_role		= data_user["role"]
+
+	# if password_enc != db_password:
+	# 	return make_response(jsonify(deskripsi="Password salah"), 401)
+
+	jwt_payload = {
+		"username" : db_username,
+		"role" : role
+	}
+
+	access_token = create_access_token(username, additional_claims=jwt_payload)
+
+	return jsonify(access_token=access_token)
+
+
 
 @app.errorhandler(404)
 def not_found(error):
@@ -78,3 +127,6 @@ def not_found(error):
 #register blueprint
 app.register_blueprint(siswa, url_prefix='/siswa')
 app.register_blueprint(pelanggan, url_prefix='/pelanggan')
+app.register_blueprint(artikel, url_prefix='/artikel')
+app.register_blueprint(poli_gizi, url_prefix='/poli_gizi')
+app.register_blueprint(poli_klinik, url_prefix='/poli_klinik')
